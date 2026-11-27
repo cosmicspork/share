@@ -1,0 +1,59 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  # Test (but do not deploy) on PRs.
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Only what checkout needs; the deploy authenticates with its own API token.
+permissions:
+  contents: read
+
+# Queue deploys rather than cancelling them. A cancelled run could stop
+# between applying a migration and deploying the code that expects it.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun run test
+
+      # The CLI is not deployed, but a commit that breaks its build should fail here.
+      - name: Build the CLI
+        run: bun run build:cli
+
+      # Migrations first: the new code may depend on the new schema, and
+      # migrations are written so the old code keeps working until it is replaced.
+      - name: Apply D1 migrations
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
+        if: github.event_name != 'pull_request'
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply share --remote
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
+        if: github.event_name != 'pull_request'
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
