@@ -1,0 +1,19 @@
+{
+  "name": "share",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p cli",
+    "build:cli": "bun build --compile cli/main.ts --outfile dist/share"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.10.0",
+    "@cloudflare/workers-types": "^5.20261127.1",
+    "@types/bun": "^1.4.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.2",
+    "wrangler": "^4"
+  }
+}

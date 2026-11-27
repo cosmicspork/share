@@ -1,0 +1,42 @@
+{
+  "name": "share",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+
+  // The admin API must only be reachable through the Access-protected custom
+  // domain. A workers.dev or preview URL would bypass Access entirely.
+  "workers_dev": false,
+  "preview_urls": false,
+
+  "routes": [
+    { "pattern": "go.joshbowen.net", "custom_domain": true },
+    { "pattern": "go-admin.joshbowen.net", "custom_domain": true }
+  ],
+
+  "vars": {
+    // The Worker dispatches on these two hostnames; anything else is a 404.
+    "CONTENT_HOST": "go.joshbowen.net",
+    "ADMIN_HOST": "go-admin.joshbowen.net",
+    // Fill both in from the Access application (see README). While either is
+    // empty the admin host rejects every request.
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": ""
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "share",
+      // Replace with the id printed by `wrangler d1 create share`.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "share" }],
+
+  // Daily: delete expired items and abandoned bundle drafts.
+  "triggers": { "crons": ["17 4 * * *"] },
+
+  "observability": { "enabled": true }
+}
